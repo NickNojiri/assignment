@@ -4,8 +4,6 @@
  * I have not received or given unauthorized assistance.
  */
 
-#include <algorithm>
-#include <cctype>
 #include <climits> /* For INT_MAX */
 #include <cstdlib>
 #include <iomanip>
@@ -13,16 +11,16 @@
 #include <string>
 #include <vector>
 
-using std::cout;    // for console output
-using std::endl;    // for new line
-using std::flush;   // for flushing output buffer
-using std::isdigit; // for checking if char is digit
-using std::max;     // for finding max of two numbers easy to write
+using std::cout;  // for console output
+using std::endl;  // for new line
+using std::flush; // for flushing output buffer
+
 using std::ostream; // for overloading insertion operator
 using std::setw;    // for formatted width output
-using std::string;  // for string data type hard to write
-using std::system;  // for system commands like "date"
-using std::vector;  // for internal digit storage
+
+using std::string; // for string data type hard to write
+
+using std::vector; // for internal digit storage
 
 class BigInt {
 private:
@@ -76,7 +74,7 @@ public:
     } else {
       // Loop from end to start
       for (int i = (int)s.length() - 1; i >= 0; --i) {
-        if (isdigit(s[i])) {
+        if (s[i] >= '0' && s[i] <= '9') {
           v.push_back(s[i] - '0');
         }
       }
@@ -98,7 +96,7 @@ public:
     BigInt res;
     res.v.clear();
     int carry = 0;
-    size_t n = max(v.size(), other.v.size());
+    size_t n = (v.size() > other.v.size()) ? v.size() : other.v.size();
     for (size_t i = 0; i < n || carry; ++i) {
       int sum = carry + (i < v.size() ? v[i] : 0) +
                 (i < other.v.size() ? other.v[i] : 0);
@@ -294,10 +292,9 @@ public:
   }
 };
 
-// Main Program - DO NOT MODIFY
 int main() {
   int space = 10;
-  cout << "\a\nTestUnit:\n" << flush; // std:: flush clears the buffer
+  cout << "\a\nTestUnit:\n" << flush;
   cout << "User Name:" << flush;
   system("whoami");
   system("date");
