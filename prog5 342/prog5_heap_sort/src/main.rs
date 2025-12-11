@@ -41,37 +41,37 @@ fn display_tree(arr: &[u32], size: usize) {
     let levels = 5; // We know it's size 31, so 5 levels (0-4)
     let mut index = 0;
 
+    // Helper to get padding for a level: (initial, between)
+    let get_padding = |level: usize| -> (usize, usize) {
+        match level {
+            0 => (30, 0),
+            1 => (14, 30),
+            2 => (6, 14),
+            3 => (2, 6),
+            4 => (0, 2),
+            _ => (1, 1),
+        }
+    };
+
+    // Helper to calculate centers for a level
+    let get_centers = |level: usize, count: usize| -> Vec<usize> {
+        let (initial, between) = get_padding(level);
+        let mut centers = Vec::with_capacity(count);
+        let mut current_pos = initial; 
+        for _ in 0..count {
+            // Number width is 2. Center is start + 1 (0-indexed relative to start)
+            centers.push(current_pos + 1);
+            current_pos += 2 + between;
+        }
+        centers
+    };
+
     for level in 0..levels {
         let items_in_level = 1 << level;
-        
-        // Calculated identation (initial_padding) and gap (between_padding)
-        // to ensure parents are perfectly centered above children.
-        // L4 (Leaves): Indent 0, Gap 2
-        // L3: Indent 2, Gap 6
-        // L2: Indent 6, Gap 14
-        // L1: Indent 14, Gap 30
-        // L0: Indent 30
-        let initial_padding = match level {
-            0 => 30,
-            1 => 14,
-            2 => 6,
-            3 => 2,
-            4 => 0,
-            _ => 1,
-        };
-        
-        let between_padding = match level {
-            0 => 0,
-            1 => 30,
-            2 => 14,
-            3 => 6,
-            4 => 2,
-            _ => 1,
-        };
+        let (initial_padding, between_padding) = get_padding(level);
 
-        // Print initial padding
+        // Print numbers
         print!("{:width$}", "", width = initial_padding);
-
         for i in 0..items_in_level {
             if index < size {
                 print!("{:02}", arr[index]);
@@ -79,13 +79,78 @@ fn display_tree(arr: &[u32], size: usize) {
             } else {
                 break;
             }
-            
-            // Print padding between items, but not after the last one
             if i < items_in_level - 1 {
                 print!("{:width$}", "", width = between_padding);
             }
         }
-        println!("\n"); 
+        println!();
+
+        // Check if we need connectors (if not last level)
+        // And if there are actually children to connect to
+        if level < levels - 1 && index < size {
+            let next_level = level + 1;
+            let next_count = 1 << next_level;
+            
+            let current_centers = get_centers(level, items_in_level);
+            let next_centers = get_centers(next_level, next_count);
+            
+            // Build the three connector lines
+            // Maximum width logic: L4 is ~62 chars. 100 is safe.
+            let max_width = 100;
+            let mut row1 = vec![' '; max_width]; // Bars under parents
+            let mut row2 = vec![' '; max_width]; // Horizontal dashes
+            let mut row3 = vec![' '; max_width]; // Bars above children
+
+            // Iterate over next level nodes
+            let start_index_next = (1 << next_level) - 1;
+            
+            for i in 0..next_count {
+                let child_idx = start_index_next + i;
+                if child_idx >= size { break; }
+
+                let child_center = next_centers[i];
+                let parent_local_idx = i / 2;
+                let parent_center = current_centers[parent_local_idx];
+
+                // R3: Bar above child
+                if child_center < max_width { row3[child_center] = '|'; }
+                
+                // R1: Bar below parent
+                if parent_center < max_width { row1[parent_center] = '|'; }
+
+                // R2: Horizontal dash
+                let (start, end) = if child_center < parent_center {
+                    (child_center + 1, parent_center) // LEFT child: dash rightwards to parent
+                } else {
+                    (parent_center + 1, child_center) // RIGHT child: dash rightwards from parent
+                };
+                
+                for k in start..end {
+                    if k < max_width { row2[k] = '-'; }
+                }
+                // Optional: connect exact intersection points?
+                // Standard ASCII often puts corner pieces, but simple '-' is requested.
+                // We leave the intersection at parent_center as ' ' or keep existing?
+                // Actually, if we just fill start..end with '-', the parent center itself is NOT filled.
+                // Which is good if we want "   |   " then "---|---"
+                // But row2[parent_center] needs to be something?
+                // If we want a continuous line:
+                // Left child draws up to parent_center - 1.
+                // Right child draws from parent_center + 1.
+                // The parent center spot in Row 2: usually dashes go THROUGH it.
+                // Let's force a dash at parent_center if it's being connected.
+                if parent_center < max_width { row2[parent_center] = '-'; }
+            }
+
+            // Print the rows, trimming spaces
+            let r1: String = row1.into_iter().collect();
+            let r2: String = row2.into_iter().collect();
+            let r3: String = row3.into_iter().collect();
+            
+            println!("{}", r1.trim_end());
+            println!("{}", r2.trim_end());
+            println!("{}", r3.trim_end());
+        }
     }
 }
 
@@ -131,6 +196,7 @@ fn heapify_down(arr: &mut [u32], size: usize, index: usize) {
     }
 }
 
+///code from nick nojiri's big brain
 fn wait_for_enter() {
     let mut buffer = [0u8; 1];
     let _ = io::stdin().read(&mut buffer);
